@@ -1,0 +1,41 @@
+JCL Dates Functions https://www.techagilist.com/mainframe/jcl/date-functions-using-sort-utility/
+---------------------------------------------------------------------------------------------------
+1.Simple Sort   
+--------------
+	SORT FIELDS=(1,3,CH,A,9,3,CH,A)
+2.Eliminate Duplicates  
+--------------------------
+	SORT FIELDS=(1,3,CH,A) 
+        SUM FIELDS=NONE 
+2a.Eliminate Duplicates and Copy Eliminated Duplicates
+----------------------------------------------------------
+	SORT FIELDS=(1,3,CH,A) 
+        SUM FIELDS=NONE,XSUM 
+
+3.Split File depend on Condition
+-----------------------------------
+	SORT FIELDS=COPY 
+      	OUTFIL FILES=01,INCLUDE=(1,6,CH,EQ,C'MOHANK')
+      	OUTFIL FILES=02,INCLUDE=(1,6,CH,EQ,C'SURESH')
+      	OUTFIL FILES=03,INCLUDE=(1,6,CH,EQ,C'KRISHN')
+3a.Depend on Count
+-------------------
+  SORT FIELDS=COPY 
+  OUTFIL FILES=01,ENDREC=200 
+  OUTFIL FILES=02,STARTREC=201,ENDREC=400 
+  OUTFIL FILES=03,STARTREC=401,ENDREC=700 
+4.Copy Records Depend on Count
+-------------------------------
+     SORT FIELDS=COPY 
+     INCLUDE COND=(1,6,CH,EQ,C'SURESH') 
+5.Formating and Copy
+-------------------------------
+   SORT FIELDS=COPY
+   INREC FIELDS=(7:2,5,20:10,3) 
+
+INREC	:	Adds, Deletes, or Reformats fields BEFORE the records are sorted or merged. So that performance willbe improved
+OUTREC	:	Adds, Deletes, or Reformats fields AFTER  the records are sorted or merged
+6.
+-------------------
+ SKIPREC=n                                                          
+ STOPAFT=n
