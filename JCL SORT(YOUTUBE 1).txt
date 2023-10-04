@@ -1,0 +1,491 @@
+_________________________________________________________________
+Youtube	-	Mainframe Made Easy - Venkatesh Radhakrishnan
+_________________________________________________________________
+SORT PRODUCT
+--------------
+
+	1.DFSORT(IBM)
+	2.SYNCSORT(CA)
+
+	In JCL we will simply mention SORT, based on installed product it will work
+
+	Mandatory Parameters(4)
+		SORTIN
+		SORTOUT
+		SYSIN	- start from column 2, if we start from column 1 or any other syntax error will get MAXCC 16
+		SYSOUT	- if we omit this, MAXCC 20 THROWN
+
+How it Works:
+-------------
+	First 	- SORTIN will copied to Temporary Dataset
+	Second	- CONTROL Cards applied
+	Third	- Temporary file copied to SORTOUT
+
+SORT CARD STATMENTS:
+-------------------
+	
+	-	Sort Field= is Mandatory
+	-	We can add some other additional statements as per requirement
+	-	When more than one statement included,it works on pre-defined priority.
+
+	SORTIN
+	SKIPREC
+	INCLUDE/OMIT
+	STOPAFT
+	INREC
+	SORT/SUM or COPY
+	OUTREC
+	OUTFIL
+	SORTOUT
+
+	-	 PFA image
+
+	
+SORT Techniques:
+----------------
+
+Mandatory statement is "Sort Fields"
+
+Data TYPE/Format = CH (char),ZD(Signed/Unsigned),PD(COMP-3,COMP),BI(Binary,COMP)
+
+Sort Order=A/D
+
+RELOPR=EQ,NE,GT,LT,GE,LE
+
+LOGIOPR=AND,OR
+
+1. Copy/Backup
+-------------------
+	Sort Field=COPY
+
+		-	Copy Input to Output
+
+2.Sorting
+-------------
+	Sort Fields=(START,LEN,TYPE,ORDER)
+		
+		-	To arrange in specific order
+			-	eg:Sort Fields=(1,5,ZD,A)
+			-	eg:Sort Fields=(1,5,CH,A)
+
+3.SKIPREC,STOPAFT
+----------------------
+	Sort Fields=(START,LEN,TYPE,ORDER),SKIPREC=N,STOPAFT=m
+
+		-	To SKIP N records and STOP after M records 
+		-	To arrange in specific order
+			-	eg:Sort Fields=(1,5,CH,A),SKIPREC=3,STOPAFT=4
+		
+4.INCLUDE COND
+----------------
+	Sort Fields=COPY / Sort Fields=(START,LEN,TYPE,ORDER)
+
+   One Condition:
+   	INCLUDE COND=(START,LEN,TYPE,RELOPR,VALUE)
+		-eg:	INCLUDE COND=(15,10,CH,EQ,C'SONY')
+		-eg:	INCLUDE COND=(40,7,ZD,GT,400)
+
+   Multiple Condition:
+ 	INCLUDE COND=(START,LEN,TYPE,RELOPR,VALUE,OR/AND,START,LEN,TYPE,RELOPR,VALUE)
+		-eg:	INCLUDE COND=(15,10,CH,EQ,C'SONY',OR,15,10,CH,EQ,C'SANDISK')
+		-eg:	INCLUDE COND=((15,10,CH,EQ,C'SONY',OR,15,10,CH,EQ,C'SANDISK'),AND,40,7,ZD,GT,400)
+
+	
+   Compare between columns:
+   	INCLUDE COND=(START,LEN,TYPE,RELOPR,START,LEN,TYPE)
+		-eg:	INCLUDE COND=(40,7,ZD,EQ,48,7,ZD)
+ 	
+   Sub String:
+   	INCLUDE COND=(start,len,SS,value)
+		Specific Columns
+			-eg:	INCLUDE COND=(15,10,SS,EQ,C'SONY     ,SANDISK   ,HP        ')
+		Entire File
+			-eg:	INCLUDE COND=(1,80,SS,EQ,C'32GB')
+5.OMIT COND
+------------
+	Sort Fields=COPY / Sort Fields=(START,LEN,TYPE,ORDER)
+
+   One Condition:
+   	OMIT COND=(START,LEN,TYPE,RELOPR,VALUE)
+		-eg:	OMIT COND=(15,10,CH,EQ,C'SONY')
+
+6.Remove Duplicates
+--------------------
+	SUM FIELDS=NONE
+	
+	Sort Fields=(START,LEN,TYPE,ORDER)	-	Mandatory as it works based on column range 
+	
+	Sort Fields=COPY			- 	Wont work
+ 
+   	EQUALS		-	Return first occurance 
+	NO EQUALS	-	Default,randomly return any one
+	
+		-	eg:	Sort Fields=(1,5,CH,A),EQUALS
+			   	SUM FIELDS=NONE
+		-	eg:	Sort Fields=(1,5,CH,A)
+			   	SUM FIELDS=NONE
+
+
+Move Duplicates in seperate file
+------------------------------------
+
+______________________________________________________
+SORTXSUM DD      DSN=
+
+	SYNC SORT	-	Can be used
+	DFSORT		-	Wont work
+______________________________________________________	
+
+	SUM FIELDS=NONE,XSUM
+	
+ 
+		-	eg:	Sort Fields=(1,5,CH,A)
+			   	SUM FIELDS=NONE,XSUM
+
+
+7.Adding up Duplicates
+----------------------
+	SUM FIELDS=(START,LEN,TYPE)
+	
+	Sort Fields=(START,LEN,TYPE,ORDER)	-	Mandatory as it works based on column range 
+	
+	Sort Fields=COPY			- 	Wont work
+
+	
+		-	eg:	Sort Fields=(1,5,CH,A)
+			   	SUM FIELDS=(40,7,ZD)
+
+		-	eg:	Sort Fields=(1,5,CH,A)
+			   	SUM FIELDS=(40,7,ZD,65,7,ZD)
+
+8.Splitting to Multiple Files:
+-------------------------------
+	
+	Sort Fields=COPY/Sort Fields=(START,LEN,TYPE,ORDER)
+
+
+	Default DD Names SORTIN,SORTOF01,SORTOF02
+
+		-	eg: OUTFIL FILES=01,INCLUDE=(15,10,CH,EQ,C'SONY')
+			    OUTFIL FILES=01,INCLUDE=(15,10,CH,EQ,C'CANNON')
+
+		-	eg: OUTFIL FILES=01,INCLUDE=(15,10,CH,EQ,C'SONY'),OUTREC=(1,5,80:X)
+			    OUTFIL FILES=01,INCLUDE=(15,10,CH,EQ,C'CANNON')
+
+			OUTRECT filter Column as user per need
+
+
+	User DD Names SORTIN,SONY,CANNON
+
+		-	eg: OUTFIL FNAMES=SONY,INCLUDE=(15,10,CH,EQ,C'SONY')
+			    OUTFIL FNAMES=CANNON,INCLUDE=(15,10,CH,EQ,C'CANNON')
+
+	-	It can have INCLUDE/OMIT COND also, 
+	-	If INCLUDE COND present, it decides what records to SORT
+	-	OUTFIL's Include will decide what records to write
+	-	Include Cond will execute FIRST, Sort Fields is Second
+	-	OUTFIL is last
+	
+
+9.Formatting/Selecting Columns 
+-------------------------------
+OUTREC
+--------
+
+OUTREC FIELDS=()
+	Unconditional Formattting, all records will go through the mentioned Format
+
+OUTREC BUILD()	
+	Conditional Formattting, only matched records will go through the mentioned Format
+	
+	Sort Fields=COPY/Sort Fields=(START,LEN,TYPE,ORDER)
+
+	OUTREC FIELDS=(IN_START,IN_LEN,IN_START,IN_LEN,.....)
+
+	OUTREC FIELDS=(OUTPOS:START,LEN,OUTPOS:START,LEN,.....)
+
+	- 	To filter columns that user needed
+	-	To rearrange/format colums as we wish.
+	- 	To add any Text
+	- 	To replace any data
+	-	if we didnt include X at last, Low Values(X'00')/High Value(X'FF') will be included
+
+		-	eg:	OUTREC FIELDS=(1,5,X,15,10,64X)			X is space.. 2x,3x,50x or 80(lrecl):X
+		-	eg:	OUTREC FIELDS=(1,5,C';',15,10,C';'64X)		Delimiter as (;)
+		-	eg:	OUTREC FIELDS=(1,5,X,15,10,1,3,80:X)		Same column can printed/formated any number of times
+		-	eg:	OUTREC FIELDS=(10:1,5,25:15,10,80:X)		No need of X in middle, automatically it wil add
+		-	eg:	OUTREC FIELDS=(10:1,5,C'BRAND IS ',25:15,10,80:X)	
+		-	eg:	OUTREC FIELDS=(C'2',2,4,2X,15,10,80:X)		1AA01=2AA01
+
+
+INREC
+--------
+
+	Sort Fields=COPY/Sort Fields=(INREC-START,LEN,TYPE,ORDER)
+
+	- 	INREC works the same way as OUTREC FIELDS 
+	-	INREC will get executed before SORT FIELDS 
+	-	OUTREC FIELDS will get executed after SORT and SUM FIELDS
+
+	-	Sort Fields position should based on INREC repositioned place, shoud not refer actual input file positions
+		
+		-	eg:	SORT FIELDS=(1,5,CH,A)			Sorting based on Item-Code,its position remains same in Input file & INREC Reformat.
+				INREC FIELDS=(1,5,X,15,10,80:X)			
+
+		-	eg:	SORT FIELDS=(7,10,CH,A)			Sorting based on Item-Name,its position in Input file is 15 but due to reformat
+				INREC FIELDS=(1,5,X,15,10,80:X)		by INREC it changed to 7, so we need to give the same in SORT FIELDS.
+	
+10.Adding Sequence Number Column 
+-----------------------------------	
+
+	Sort Fields=COPY/Sort Fields=(START,LEN,TYPE,ORDER)
+
+	- 	SEQNUM can be used in INREC/OUTREC FIELDS or BUILD
+	-	Default increment is 1 and start is 0
+
+		
+		-	eg:	SORT FIELDS = COPY
+				OUTREC FIELDS=(SEQNUM,2,ZD,1,5,X,15,10,80:X)				Range: 00-99			
+
+		-	eg:	SORT FIELDS = COPY
+				OUTREC FIELDS=(SEQNUM,4,ZD,1,5,X,15,10,80:X)				Range: 0000-9999
+
+		-	eg:	SORT FIELDS = COPY
+				OUTREC FIELDS=(SEQNUM,4,ZD,START=1000,INCR=100,1,5,X,15,10,80:X)			
+			
+11.EDITING Numeric Fields  
+-----------------------------------	
+
+	Sort Fields=COPY/Sort Fields=(START,LEN,TYPE,ORDER)
+
+	- 	EDIT=($III,IIT.II) EDIT=(TT/TT/TTTT)
+		To format Numeric fields by adding Editable Characters (, . $ @ # - / :)
+	-	ZD,PD,BI
+	-	, . are fixed position and $ floating position
+	-	I (Insignificant digit, Masking whereever needed)
+	-	T (Significant digit,Orignal Value always)
+	-	S (Sign) SIGNS=(Leading + ,Leading - ,Trailing +,Trailing -)
+	-	SIGNS is optional, Mandatory when we gave S in EDIT=()
+
+
+		eg:	OUTREC FIELDS
+
+		
+		-	eg:	SORT FIELDS = COPY
+				OUTREC FIELDS=(1,5,ZD,EDIT=(#II,TTT),C':',
+						7,7,ZD,EDIT=($II,III.TTS),SIGNS=(,,,'-'),C':',
+						16,8,ZD,EDIT=(TT/TT/TTTT),C':',
+						27,4,ZD,EDIT=(TT:TT),80:X)								
+12.Manipulation on Numeric Field  
+-----------------------------------	
+
+	Sort Fields=COPY/Sort Fields=(START,LEN,TYPE,ORDER)
+
+	- 	ADD/SUB/MUL/DIV
+	-eg:	OUTREC FIELDS=(7,25,C';',35,7,ZD,C';',35,7,ZD,ADD,+500,TO=ZD,LENGTH=7,80:X)	Profit
+	-eg:	OUTREC FIELDS=(7,25,C';',35,7,ZD,C';',35,7,ZD,SUB,+500,TO=ZD,LENGTH=7,80:X)	Discount
+
+13.EDITING a derived Numeric Column (11) and (12)
+--------------------------------------------------
+
+	Sort Fields=COPY/Sort Fields=(START,LEN,TYPE,ORDER)
+	
+	- EDIT parameter cannot be used along with LENGTH,TO parameters
+	- So we need to use INREC for deriving and OUTREC for editing
+	- INREC will execute First(Based on Input Layout)
+	- SORT will execute Second(Based on INREC Layout)
+	- OUTEC will execute at last(Based on INREC Layout)
+
+	-	eg:	SORT   FIELDS=(1,25,CH,A)
+			INREC  FIELDS=(16,25,C';',41,9,ZD,C';',41,9,ZD,SUB,500,TO=ZD,LENGTH=9,80:X)	
+			OUTREC FIELDS=(1,25,C';',27,9,ZD,EDIT=($I,III,III.TT),C';',37,9,ZD,EDIT=($I,III,IIT.TT),80:X)
+
+14.ADD/SUB - 2 or more Numeric Columns
+------------------------------------------
+
+	Sort Fields=COPY/Sort Fields=(START,LEN,TYPE,ORDER)
+
+	- 	To add/sub/mul/div 2 or more columns in a file
+	
+
+	-eg:		OUTREC FIELDS=(1,25,C';',27,9,ZD,ADD,37,9,ZD,TO=ZD,LENGTH=9,80:X)
+	-eg:		OUTREC FIELDS=(1,25,C';',27,9,ZD,ADD,37,9,ZD,SUB,52,4,ZD,TO=ZD,LENGTH=9,80:X)
+	-eg:		OUTREC FIELDS=(1,25,C';',27,9,ZD,ADD,37,9,ZD,SUB,52,4,ZD,EDIT=(TTT,TTT,TTT),80:X)
+
+15.Converting UFF (Unified Free Format) to ZD (Zoned Decimal) 
+--------------------------------------------------------------
+
+	Sort Fields=COPY/Sort Fields=(START,LEN,TYPE,ORDER)
+
+	- 	Edited Columns back to Numeric Column	
+
+	eg : UFF   $ 65,000.00
+	     ZR      006500000  
+	-eg:		OUTREC FIELDS=(1,25,C',',27,9,C',',27,9,UFF,TO=ZD,LENGTH=9,80:X)
+
+16.SPLIT / STARTREC / ENDREC Usage in SORT
+-------------------------------------------
+
+	Sort Fields=COPY/Sort Fields=(START,LEN,TYPE,ORDER)
+
+To take multiple Backups
+
+		-eg: 	OUTFIL FILES=(01,02,03)
+
+		-eg:	OUTFIL FILES=01,INCLUDE=ALL
+			  
+		-eg:  	OUTFIL FILES=01,OMIT=NONE
+
+To split on alternative
+			    
+		-eg:	OUTFIL FILES=(01,02),SPLIT		Odd are in File 01, Even are in 02 
+
+		-eg:	OUTFIL FILES=(01,02,03),SPLIT		1st in 01, 2nd in 02, 3rd in 03
+								4th in 01, 5th in 02, 6th in 03....etc
+
+To split on bunch
+
+		-eg:	OUTFIL FILES=(01),STARTREC=1,ENDREC=5		1-5  in 01
+			OUTFIL FILES=(02),STARTREC=6,ENDREC=10		6-10 in 02
+
+		if more than 10 records there it will be ignored
+
+
+17.MERGE
+----------
+
+	-	All input files should be presorted with same column that mentioned in Merge Fields=()
+	-	Every individual file should have its own DD Name
+	-	Upto 32 file we can sort
+	-	Faster than Sort Fields=()
+
+	Merge Fields=(Start,len,Type,Order)
+
+		-eg:	Merge Fields=(1,5,CH,A)
+
+
+18.ALTSEQ
+----------
+
+	-	To change Junk to Space
+	-	00 is Low Value, we see as .
+	-	FF is Low Value, we see as .
+	-	Mainframe stores use the format Double Hexa Decinmal(i.e: EBCIDIC)
+
+	Sort Fields=COPY
+	ALTSEQ CODE=0040
+	OUTREC FIELD=(1,80,TRAN=ALTSEQ)
+
+
+	Sort Fields=COPY
+	ALTSEQ CODE=(0040,FF40)
+	OUTREC FIELD=(1,80,TRAN=ALTSEQ)
+
+19.Identify Invalid Numeric
+---------------------------
+
+	-	Junk or Non-Numeric data in a numeric fild
+	-	It may cause SoC7
+
+	eg:	SORT FIELDS=COPY
+		INCLUDE COND=(15,5,ZD,NE,NUM)				Filters Invalid record
+
+	eg:	SORT FIELDS=COPY
+		INCLUDE COND=(15,5,ZD,EQ,NUM)				Filters valid record
+
+	eg:	SORT FIELDS=COPY
+		OUTFIL FILES=01,INCLUDE=(15,5,ZD,NE,NUM)		Filters Invalid record
+		OUTFIL FILES=02,INCLUDE=(15,5,ZD,EQ,NUM)		Filters valid record
+
+	eg:	SORT FIELDS=COPY
+		OUTFIL FILES=01,INCLUDE=(15,5,ZD,NE,NUM,OR,25,5,ZD,NE,NUM)			Filters Invalid record
+		OUTFIL FILES=02,INCLUDE=(15,5,ZD,EQ,NUM,AND,25,5,ZD,EQ,NUM)			Filters valid record
+
+
+20. JOINS
+----------
+	
+	SORTJNF1,SORTJNF2... are DD names		
+
+	Matching records alone(INNER JOIN)
+	
+	eg:	SORT FIELDS=COPY
+		JOINKEYS FIELS=F1,FIELDS=(1,5,A)
+		JOINKEYS FIELS=F2,FIELDS=(1,5,A)
+		REFORMAT FIELDS=(F1:1,43,F2:7,37)
+
+	Matching records and Unmatch from F1(LEFT OUTER JOIN)
+	
+	eg:	SORT FIELDS=COPY
+		JOINKEYS FIELS=F1,FIELDS=(1,5,A)
+		JOINKEYS FIELS=F2,FIELDS=(1,5,A)
+		JOIN UNPAIRED,F1
+		REFORMAT FIELDS=(F1:1,43,F2:7,37)
+
+	Matching records and Unmatch from F2(RIGHT OUTER JOIN)
+	
+	eg:	SORT FIELDS=COPY
+		JOINKEYS FIELS=F1,FIELDS=(1,5,A)
+		JOINKEYS FIELS=F2,FIELDS=(1,5,A)
+		JOIN UNPAIRED,F2
+		REFORMAT FIELDS=(F1:1,43,F2:7,37)
+
+	Matching records and Unmatch from F1 and F2(FULL OUTER JOIN)
+	
+	eg:	SORT FIELDS=COPY
+		JOINKEYS FIELS=F1,FIELDS=(1,5,A)
+		JOINKEYS FIELS=F2,FIELDS=(1,5,A)
+		JOIN UNPAIRED,F1,F2
+		REFORMAT FIELDS=(F1:1,43,F2:7,37)
+
+
+
+21. FIND and REPLACE
+--------------------
+
+	-	Find and replace the characters
+	-	Length may increase/decrease/same
+
+	eg:	SORT FIELDS=COPY
+		OUTREC FINDREP=(IN=C';',OUT=C'')
+
+	eg:	SORT FIELDS=COPY
+		OUTREC FINDREP=(IN=C'1AC',OUT=C'#')
+
+	eg:	SORT FIELDS=COPY
+		OUTREC FINDREP=(INOUT=(C'1AC',C'#',C';',C',',C'SONY',C'LG  ')
+
+22. IN-BUILD Date
+--------------------
+
+	-	To add date in different formats
+	-	Computation on dates(ADD/Subtract Days)
+	-	INREC/OUTREC FIELDS=
+	-	INREC/OUTREC BUILD=
+
+	eg:	SORT FIELDS=COPY
+		OUTREC FIELDS=(C'YYYYMMDD:',DATE1,C';',C'YYYYMM:',DATE2,C';',C'YYYYDDD:',DATE3,80:X)
+
+	eg:	SORT FIELDS=COPY
+		OUTREC FIELDS=(C'YYYYMMDD:',DATE1,C';',C'YYYYMM:',DATE2,C';',C'YYYYDDD:',DATE3,80:X)
+
+	eg:	SORT FIELDS=COPY
+		OUTREC FIELDS=(C'TODAY:',DATE1,C';',C'YESTERDAY:',DATE1-1,C';',C'TOMORROW:',DATE1+1,
+			       C';',C'Last Week:',DATE1-7,80:X)
+
+23. Data Translation
+--------------------
+
+	-	Case Translation TRAN=UTOL
+	-	Storage Format Translation TRAN=HEX,TRAN=ETOA,TRAN=ATOE	
+	-	Number FOrmat Translation to ZD,PD,BI	
+
+	eg:	SORT FIELDS=COPY	
+		OUTREC FIELDS=(1,80,TRAN=UTOL,80:X)
+
+	eg:	SORT FIELDS=COPY
+		OUTREC FIELDS=(1,80,TRAN=UTOL,80:X)
+
+	eg:	SORT FIELDS=COPY	
+		OUTREC FIELDS=(1,5,7,25,45,9,ZD,TO=PD,LENGTH=5,80:X)
+
